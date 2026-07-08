@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Future Native — Presenter Notes</title>
+<style>
+  :root{
+    --bg:#111214;
+    --card:#1a1b1e;
+    --ink:#F2F2F0;
+    --muted:#8b8d92;
+    --blue:#4B75E8;
+    --blue-dim:#26325c;
+    --coral:#FF6E5A;
+    --line:#2c2d31;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg);
+    font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
+    overscroll-behavior:none;
+    user-select:none;
+  }
+  #app{
+    position:relative;
+    height:100dvh;
+    width:100vw;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* top bar */
+  #topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 20px 10px 20px;
+    flex-shrink:0;
+  }
+  #counter{
+    font-size:13px;
+    letter-spacing:0.04em;
+    color:var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  #section-pill{
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    border:1px solid var(--line);
+    padding:4px 10px;
+    border-radius:20px;
+  }
+  #progress{
+    height:3px;
+    background:var(--line);
+    flex-shrink:0;
+    margin:0 20px;
+    border-radius:2px;
+    overflow:hidden;
+  }
+  #progress-fill{
+    height:100%;
+    background:var(--blue);
+    width:0%;
+    transition:width .25s ease;
+  }
+
+  /* card stage */
+  #stage{
+    flex:1;
+    position:relative;
+    overflow:hidden;
+  }
+  .card{
+    position:absolute;
+    inset:0;
+    padding:28px 24px 100px 24px;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    opacity:0;
+    transform:translateX(24px);
+    transition:opacity .22s ease, transform .22s ease;
+    pointer-events:none;
+    overflow-y:auto;
+  }
+  .card.active{
+    opacity:1;
+    transform:translateX(0);
+    pointer-events:auto;
+  }
+  .card.prev{
+    transform:translateX(-24px);
+  }
+
+  .tag{
+    display:inline-block;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    font-weight:600;
+    padding:4px 10px;
+    border-radius:20px;
+    margin-bottom:18px;
+    width:fit-content;
+  }
+  .tag.coral{ background:rgba(255,110,90,0.14); color:var(--coral); }
+  .tag.blue{ background:var(--blue-dim); color:var(--blue); }
+  .tag.plain{ background:transparent; color:var(--muted); border:1px solid var(--line); }
+
+  .headline{
+    font-size:26px;
+    line-height:1.22;
+    font-weight:600;
+    color:var(--ink);
+    margin:0 0 20px 0;
+  }
+  .headline em{
+    font-style:normal;
+    color:var(--blue);
+  }
+
+  .notes{
+    font-size:16.5px;
+    line-height:1.55;
+    color:#d3d4d7;
+    font-weight:400;
+  }
+  .notes strong{
+    color:var(--ink);
+    font-weight:600;
+  }
+  .notes .cue{
+    display:block;
+    margin-top:14px;
+    font-size:14px;
+    color:var(--muted);
+    border-left:2px solid var(--line);
+    padding-left:12px;
+  }
+
+  /* bottom nav */
+  #navzones{
+    position:absolute;
+    inset:0;
+    display:flex;
+    z-index:1;
+  }
+  #navzones div{ flex:1; }
+
+  #dots{
+    position:absolute;
+    bottom:0; left:0; right:0;
+    display:flex;
+    justify-content:center;
+    gap:5px;
+    padding:16px 20px 22px 20px;
+    background:linear-gradient(to top, var(--bg) 40%, transparent);
+    flex-wrap:wrap;
+    z-index:2;
+    pointer-events:none;
+  }
+  .dot{
+    width:5px; height:5px; border-radius:50%;
+    background:var(--line);
+  }
+  .dot.on{ background:var(--blue); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <span id="section-pill">Section</span>
+    <span id="counter">1 / 25</span>
+  </div>
+  <div id="progress"><div id="progress-fill"></div></div>
+  <div id="stage"></div>
+  <div id="navzones"><div id="zone-prev"></div><div id="zone-next"></div></div>
+  <div id="dots"></div>
+</div>
+
+<script>
+const cards = [
+  {section:"Open", tag:"plain", headline:"The profession you're joining <em>doesn't exist yet.</em>",
+   notes:"Open cold. Don't summarise what's coming, let the title do the work.<span class='cue'>Cue: one beat of silence after landing the blue line.</span>"},
+
+  {section:"Provocation", tag:"coral", headline:"Is this a designer job?",
+   notes:"Read the listing straight, no editorialising. Let them notice for themselves that visual skill is buried or missing.<span class='cue'>Cue: pause before asking \"is this a designer job?\" — it's a real question, not rhetorical.</span>"},
+
+  {section:"I / How we got here", tag:"blue", headline:"A fossil record of the designer.",
+   notes:"Frame it: not a history lesson. A record of what got redefined every time the job outgrew its old name."},
+
+  {section:"I — 01", tag:"blue", headline:"Maker — Dieter Rams, 1950s–70s",
+   notes:"Rams: the job was the object itself. <strong>Gloss it:</strong> this is the era where \"good design\" meant a physical thing worked and looked right. DESIGNER = MAKER."},
+
+  {section:"I — 02", tag:"blue", headline:"Voice — Saul Bass, 1980s–90s",
+   notes:"Bass didn't design objects, he designed how a whole company felt from the outside. <strong>Gloss it:</strong> shift from \"make the thing\" to \"shape how people feel about the thing.\" DESIGNER = VOICE."},
+
+  {section:"I — 03", tag:"blue", headline:"Strategist — Jobs / Ive, 2000s–10s",
+   notes:"Design stops being a department and becomes the business strategy itself. DESIGNER = STRATEGIST."},
+
+  {section:"I — 04", tag:"blue", headline:"Framer — Stanford &amp; IDEO, 2010s",
+   notes:"Design-thinking era. \"How might we\" as a tool for reframing problems, not just answering them. DESIGNER = FRAMER."},
+
+  {section:"I / Conclusion", tag:"blue", headline:"The debt gets passed down. (build)",
+   notes:"Trace the arrow with your voice, not just the room's eyes.<span class='cue'>Maker could name the craft → became Voice: gained influence, blurred craft clarity → became Strategist: gained a seat at the table, lost a singular identity → became Framer: gained scope over systems, lost a name that fits.</span>"},
+
+  {section:"I / Conclusion", tag:"blue", headline:"You're not joining a stable tradition.",
+   notes:"Land the blue line as the actual thesis, not a recap: you're joining a conversation still mid-sentence.<span class='cue'>Cue: slow down here — this is the Section I payoff.</span>"},
+
+  {section:"II / This is where we are", tag:"coral", headline:"Four dimensions of design's present condition.",
+   notes:"Transition line: four ways design's influence looks different today than on any fossil-record slide."},
+
+  {section:"II — Scale", tag:"coral", headline:"One straw. 500 million times a day.",
+   notes:"One decision, half a billion times a day, no revision cycle.<span class='cue'>Cue: ask the provocation directly, let it sit a beat before moving on.</span>"},
+
+  {section:"II — Complicity", tag:"coral", headline:"Juul — the USB drive.",
+   notes:"Say it plainly: these were good designers, doing skilled work, on a bad brief. That's the uncomfortable part — not carelessness."},
+
+  {section:"II — Displacement", tag:"coral", headline:"WhatsApp vs UPI.",
+   notes:"Both outcomes — one harmful, one genuinely good — no designer in either room.<span class='cue'>Cue: don't resolve the tension, let the provocation stand.</span>"},
+
+  {section:"II — AI", tag:"coral", headline:"Getty v. Stability AI.",
+   notes:"Keep it factual — this is a real, ongoing case, not speculation. Don't over-explain, let the provocation carry it."},
+
+  {section:"II / Conclusion", tag:"coral", headline:"This is not a crisis.",
+   notes:"Tone pivot: from \"the industry is unstable\" to \"that instability is your actual starting material.\"<span class='cue'>Cue: say it like reassurance, not a warning.</span>"},
+
+  {section:"III / What matters now", tag:"blue", headline:"Four capabilities for the coming years.",
+   notes:"Set up: these are the things school can't easily teach, and a tutorial can't replace."},
+
+  {section:"III — Capability 01", tag:"blue", headline:"See what isn't there yet. (Kodak / Apple)",
+   notes:"Kodak had the tech first and missed the reframe. Apple had worse hardware and won by asking a different question.<span class='cue'>Cue: say \"frame the problem before it's been named\" slowly — it's the whole point.</span>"},
+
+  {section:"III — Capability 02", tag:"blue", headline:"Know what you're responsible for. (Juul callback)",
+   notes:"Deliberate callback to the Complicity slide — name it as a callback out loud. Ethics isn't a checklist at the end, it's a live question inside every decision."},
+
+  {section:"III — Capability 03", tag:"blue", headline:"Work in rooms you weren't trained for.",
+   notes:"Point to the photo — it's a real room, not a stock shot. You won't be the smartest person in most rooms you're in.<span class='cue'>Cue: that's fine. That's the job.</span>"},
+
+  {section:"III — Capability 04", tag:"blue", headline:"Collect experiences before an identity.",
+   notes:"Softer than the previous three — this one's permission-giving, not provocation.<span class='cue'>Cue: slow down on \"the school is the permission.\"</span>"},
+
+  {section:"III / Conclusion", tag:"blue", headline:"The designers who will matter…",
+   notes:"Read it exactly as written — don't paraphrase. This line is written for the ear, not the eye."},
+
+  {section:"To conclude", tag:"plain", headline:"I didn't go looking outside my discipline enough.",
+   notes:"Direct address — eye contact, not the slide. This is regret with precision, not false modesty. Say it plainly."},
+
+  {section:"To conclude", tag:"plain", headline:"Today, as a design team lead…",
+   notes:"Concrete, not abstract: a mess and some people, figuring out what to build before anyone hands you a brief. This is the evidence for the line that follows."},
+
+  {section:"To conclude", tag:"plain", headline:"That doesn't stop when you graduate. It's the job.",
+   notes:"Land this flat and short — it's the button on the whole talk.<span class='cue'>Cue: don't add anything after it verbally. Let the slide sit.</span>"},
+
+  {section:"Close", tag:"plain", headline:"Welcome to Strate.",
+   notes:"Let it sit in silence for a beat before saying thank you. Don't rush off the last slide."}
+];
+
+let idx = 0;
+const stage = document.getElementById('stage');
+const counter = document.getElementById('counter');
+const sectionPill = document.getElementById('section-pill');
+const progressFill = document.getElementById('progress-fill');
+const dotsWrap = document.getElementById('dots');
+
+function buildCards(){
+  cards.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.dataset.index = i;
+    el.innerHTML = `
+      <span class="tag ${c.tag}">${c.section}</span>
+      <h1 class="headline">${c.headline}</h1>
+      <div class="notes">${c.notes}</div>
+    `;
+    stage.appendChild(el);
+  });
+  cards.forEach((c,i)=>{
+    const d = document.createElement('div');
+    d.className = 'dot';
+    dotsWrap.appendChild(d);
+  });
+}
+
+function render(){
+  const els = stage.querySelectorAll('.card');
+  els.forEach((el, i) => {
+    el.classList.remove('active','prev');
+    if(i === idx) el.classList.add('active');
+    else if(i < idx) el.classList.add('prev');
+  });
+  counter.textContent = (idx+1) + ' / ' + cards.length;
+  sectionPill.textContent = cards[idx].section;
+  progressFill.style.width = ((idx+1)/cards.length*100) + '%';
+  const dots = dotsWrap.querySelectorAll('.dot');
+  dots.forEach((d,i)=> d.classList.toggle('on', i===idx));
+}
+
+function next(){ if(idx < cards.length-1){ idx++; render(); } }
+function prev(){ if(idx > 0){ idx--; render(); } }
+
+document.getElementById('zone-next').addEventListener('click', next);
+document.getElementById('zone-prev').addEventListener('click', prev);
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowRight') next();
+  if(e.key === 'ArrowLeft') prev();
+});
+
+// swipe support
+let touchStartX = null;
+document.addEventListener('touchstart', (e)=>{ touchStartX = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', (e)=>{
+  if(touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if(dx < -40) next();
+  if(dx > 40) prev();
+  touchStartX = null;
+}, {passive:true});
+
+buildCards();
+render();
+</script>
+</body>
+</html>
